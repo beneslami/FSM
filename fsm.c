@@ -3,11 +3,6 @@
 #include <stdlib.h>
 #include <memory.h>
 
-typedef enum {
-    FSM_FALSE,
-    FSM_TRUE
-}fsm_bool_t;
-
 struct transition_table_entry_ {
   char transition_key[MAX_TRANSITION_KEY_SIZE];
   unsigned int transition_key_size;
@@ -30,6 +25,11 @@ struct fsm_{
   char input_buffer[MAX_INPT_BUFFER_LENG]; /* Application provided input data to parse by FSM */
   unsigned int input_buffer_size; /* Length of above data */
 };
+
+char*
+get_fsm_output_string(fsm_t *fsm){
+  return fsm->input_buffer;
+}
 
 fsm_t*
 create_new_fsm(const char *fsm_name){
@@ -67,4 +67,39 @@ create_and_insert_new_tt_entry(tt_t *transition_table, char *transition_key, uns
   tt_entry_ptr->transition_key[sizeof_key]= '\0';
   tt_entry_ptr->transition_key_size = sizeof_key;
   tt_entry_ptr->next_state = next_state;
+}
+
+fsm_error_t
+execute_fsm(fsm_t *fsm, char * input_buffer, unsigned int size, fsm_bool_t *fsm_result){
+  state_t *initial_state = fsm->initial_state;
+  assert(initial_state);
+  state_t *current_state = fsm->initial_state;
+  state_t *next_state = NULL;
+  fsm->input_buffer_curser = 0;
+  unsigned int length_read = 0;
+  unsigned int input_buffer_len = size;
+  if(fsm_result){
+    *fsm_result = FSM_FALSE;
+  }
+
+  while(fsm->input_buffer_curser < MAX_INPT_BUFFER_LEN){
+    length_read = 0;
+    next_state = fsm_appl_transition(fsm, current_state, input_buffer + fsm->input_buffer_curser, input_buffer_len - fsm->input_buffer_curser, &length_read);
+    if(!next_state){
+      return FSM_NO_TRANSITION;
+    }
+    if(length_read){
+      fsm->input_buffer_curser += length_read;
+      current_state = next_state;
+      if(fsm->input_buffer_curser == input_buffer_len){
+        break;
+      }
+      continue;
+    }
+    break;
+  }
+  if(fsm_result){
+    *fsm_result = current_state->is_final;
+  }
+  return FSM_NO_ERROR;
 }
