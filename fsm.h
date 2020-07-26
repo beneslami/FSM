@@ -12,6 +12,7 @@ typedef struct fsm_ fsm_t;                           /* opaque data structure */
 typedef struct state_ state_t;                       /* opaque data structure */
 typedef struct transition_table_entry_ tt_entry_t;   /* opaque data structure */
 typedef struct transition_table_ tt_t;               /* opaque data structure */
+typedef struct fsm_output_buff_ fsm_output_buff_t;   /* opaque data structure */
 typedef enum {
     FSM_FALSE,
     FSM_TRUE
@@ -33,6 +34,14 @@ typedef void (*output_fn)(
   char*,                            /* Input buff */
   unsigned int,                     /* size of Input buffer */
   fsm_output_buffer_t*);            /* Output buffer */
+
+static inline fsm_bool_t
+is_tt_entry_empty(tt_entry_t *tt){
+  if(!tt->next_state){
+    return FSM_TRUE;
+  }
+  return FSM_FALSE;
+}
 
 /* API declaration */
 fsm_t*
@@ -58,5 +67,52 @@ execute_fsm(fsm_t*, char*, unsigned int, fsm_output_buffer_t, fsm_bool_t* /*resu
 
 char*
 get_fsm_output_string(fsm_t*);
+
+char*
+get_transition_table_entry_key(tt_entry_t*);
+
+unsigned int
+get_transition_table_entry_key(tt_entry_t*);
+
+state_t*
+get_transition_table_entry_key(tt_entry_t*);
+
+char*
+get_state_name(state_t*);
+
+tt_t
+get_state_transition_table(state_t*);
+
+fsm_bool_t
+get_state_fsm_bool(state_t*);
+
+state_t*
+get_fsm_initial_state(fsm_t*);
+
+char*
+get_fsm_name(fsm_t*);
+
+char*
+get_fsm_input_buffer(fsm_t*);
+
+unsigned int
+get_fsm_input_buffer_size(fsm_t*);
+
+char*
+fsm_output_buffer(fsm_output_buff_t*);
+
+unsigned int
+fsm_curser_position(fsm_output_buff_t*);
+
+#define FSM_ITERATE_BEGIN(transition_table, entry_ptr)      \
+  do{                                                       \
+      unsigned int index = 0;                               \
+      for(; index < MAX_TRANSITION_TABLE_SIZE; index++){    \
+        entry_ptr = &(transition_table->tt_entry_t[index]); \
+        if(is_tt_entry_empty(entry_ptr) == FSM_TRUE)        \
+        break;                                              \
+
+#define FSM_ITERATE_END(transition_table, entry_ptr)        \
+}}while(0);
 
 #endif
