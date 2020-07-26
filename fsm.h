@@ -1,6 +1,8 @@
 #ifndef FSM_H
 #define FSM_H
 
+#include <assert.h>
+
 #define MAX_FSM_OUTPUT_BUFFER 1024
 #define MAX_FSM_NAME_SIZE 32
 #define MAX_INPT_BUFFER_LEN 128
@@ -33,15 +35,7 @@ typedef void (*output_fn)(
   state_t*,
   char*,                            /* Input buff */
   unsigned int,                     /* size of Input buffer */
-  fsm_output_buffer_t*);            /* Output buffer */
-
-static inline fsm_bool_t
-is_tt_entry_empty(tt_entry_t *tt){
-  if(!tt->next_state){
-    return FSM_TRUE;
-  }
-  return FSM_FALSE;
-}
+  fsm_output_buff_t*);            /* Output buffer */
 
 /* API declaration */
 fsm_t*
@@ -63,9 +57,9 @@ tt_entry_t*
 create_and_insert_new_tt_entry(tt_t*, char*, unsigned int, output_fn, state_t*);
 
 fsm_error_t
-execute_fsm(fsm_t*, char*, unsigned int, fsm_output_buffer_t, fsm_bool_t* /*result*/);
+execute_fsm(fsm_t*, char*, unsigned int, fsm_output_buff_t, fsm_bool_t* /*result*/);
 
-char*
+/*char*
 get_fsm_output_string(fsm_t*);
 
 char*
@@ -76,12 +70,6 @@ get_transition_table_entry_key(tt_entry_t*);
 
 state_t*
 get_transition_table_entry_key(tt_entry_t*);
-
-char*
-get_state_name(state_t*);
-
-tt_t
-get_state_transition_table(state_t*);
 
 fsm_bool_t
 get_state_fsm_bool(state_t*);
@@ -97,6 +85,11 @@ get_fsm_input_buffer(fsm_t*);
 
 unsigned int
 get_fsm_input_buffer_size(fsm_t*);
+char*
+get_state_name(state_t*);*/
+
+tt_t
+get_state_transition_table(state_t*);
 
 char*
 fsm_output_buffer(fsm_output_buff_t*);
