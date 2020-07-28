@@ -10,6 +10,17 @@
 #define MAX_TRANSITION_TABLE_SIZE 128
 #define MAX_TRANSITION_KEY_SIZE 64
 
+#define FSM_ITERATE_BEGIN(transition_table, entry_ptr)      \
+  do{                                                       \
+      unsigned int index = 0;                               \
+      for(; index < MAX_TRANSITION_TABLE_SIZE; index++){    \
+        entry_ptr = &(transition_table->tt_entry_t[index]); \
+        if(is_tt_entry_empty(entry_ptr) == FSM_TRUE)        \
+        break;                                              \
+
+#define FSM_ITERATE_END(transition_table, entry_ptr)        \
+}}while(0);
+
 typedef struct fsm_ fsm_t;                           /* opaque data structure */
 typedef struct state_ state_t;                       /* opaque data structure */
 typedef struct transition_table_entry_ tt_entry_t;   /* opaque data structure */
@@ -31,13 +42,17 @@ typedef unsigned int (*input_fn)(   /* Returns the size of input buffer read */
   unsigned int*,                    /* Size of Data Read */
   unsigned int);                    /* Max len of read out buffer */
 typedef void (*output_fn)(
+  fsm_t*,
   state_t*,
   state_t*,
   char*,                            /* Input buff */
-  unsigned int,                     /* size of Input buffer */
-  fsm_output_buff_t*);            /* Output buffer */
+  unsigned int                     /* size of Input buffer */
+  );            /* Output buffer */
 
 /* API declaration */
+tt_t*
+get_state_tt(state_t*);
+
 fsm_t*
 create_new_fsm(const char*);
 
@@ -57,7 +72,42 @@ tt_entry_t*
 create_and_insert_new_tt_entry(tt_t*, char*, unsigned int, output_fn, state_t*);
 
 fsm_error_t
-execute_fsm(fsm_t*, char*, unsigned int, fsm_output_buff_t, fsm_bool_t* /*result*/);
+execute_fsm(fsm_t*, char*, unsigned int, fsm_output_buff_t*, fsm_bool_t* /*result*/);
+
+void
+init_fsm_output_buffer(fsm_output_buff_t*);
+
+fsm_output_buff_t*
+get_fsm_output_buff_t(fsm_t*);
+
+void
+set_fsm_output_buffer_cursor(fsm_t*, state_t*, state_t*, char, char*);
+
+state_t*
+get_next_entry(tt_entry_t*);
+
+fsm_output_buff_t*
+get_fsm_output_buff_t(fsm_t*);
+
+unsigned int
+get_fsm_out_buff_curr_pos(fsm_output_buff_t*);
+
+char*
+get_fsm_out_buff_buffer(fsm_output_buff_t*);
+
+void
+set_fsm_out_buff_curr_pos(fsm_output_buff_t*, int);
+
+char*
+get_state_name(state_t*);
+
+static inline fsm_bool_t
+is_tt_entry_empty(tt_entry_t *entry){
+  if(!get_next_entry(entry)){
+    return FSM_TRUE;
+  }
+  return FSM_FALSE;
+}
 
 /*char*
 get_fsm_output_string(fsm_t*);
@@ -85,8 +135,7 @@ get_fsm_input_buffer(fsm_t*);
 
 unsigned int
 get_fsm_input_buffer_size(fsm_t*);
-char*
-get_state_name(state_t*);*/
+
 
 tt_t
 get_state_transition_table(state_t*);
@@ -95,17 +144,6 @@ char*
 fsm_output_buffer(fsm_output_buff_t*);
 
 unsigned int
-fsm_curser_position(fsm_output_buff_t*);
-
-#define FSM_ITERATE_BEGIN(transition_table, entry_ptr)      \
-  do{                                                       \
-      unsigned int index = 0;                               \
-      for(; index < MAX_TRANSITION_TABLE_SIZE; index++){    \
-        entry_ptr = &(transition_table->tt_entry_t[index]); \
-        if(is_tt_entry_empty(entry_ptr) == FSM_TRUE)        \
-        break;                                              \
-
-#define FSM_ITERATE_END(transition_table, entry_ptr)        \
-}}while(0);
+fsm_curser_position(fsm_output_buff_t*);*/
 
 #endif
