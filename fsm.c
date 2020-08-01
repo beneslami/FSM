@@ -13,6 +13,7 @@ struct fsm_{
   char fsm_name[MAX_FSM_NAME_SIZE];  /* Name of FSM */
   char input_buffer[MAX_INPT_BUFFER_LEN]; /* Application provided input data to parse by FSM */
   unsigned int input_buffer_size; /* Length of above data */
+  unsigned int input_buffer_cursor;
   fsm_output_buff_t *fsm_output_buff;
 };
 
@@ -44,6 +45,7 @@ create_new_fsm(const char *fsm_name){
   strcpy(fsm->fsm_name, fsm_name);
   fsm->input_buffer_size = 0;
   fsm->fsm_output_buff = calloc(1, sizeof(fsm_output_buff_t));
+  fsm->input_buffer_cursor = 0;
   return fsm;
 }
 
@@ -77,6 +79,7 @@ get_next_empty_tt_entry(tt_t *transition_table){
 
 tt_entry_t*
 create_and_insert_new_tt_entry(tt_t *transition_table, char *transition_key, unsigned int sizeof_key, output_fn outp_fn, state_t *next_state){
+  assert(sizeof_key < MAX_TRANSITION_KEY_SIZE);
   tt_entry_t *entry = get_next_empty_tt_entry(transition_table);
   if(!entry){
     printf("FATAL: Transition Table is FULL\n");
@@ -90,6 +93,12 @@ create_and_insert_new_tt_entry(tt_t *transition_table, char *transition_key, uns
   return entry;
 }
 
+static fsm_bool_t
+fsm_default_input_matching_fn(char *transition_key, unsigned int size, char *user_data){
+  if(memcmp(transition_key, user_data, size))
+      return FSM_FALSE;
+  return FSM_TRUE;
+}
 
 static state_t*
 fsm_apply_transition(fsm_t *fsm, state_t *state, char *input_buffer, unsigned int size, unsigned int *length_read, fsm_output_buff_t *output_buffer){
@@ -97,11 +106,12 @@ fsm_apply_transition(fsm_t *fsm, state_t *state, char *input_buffer, unsigned in
   state_t *next_state = NULL;
   assert(size);
   FSM_ITERATE_BEGIN(state->state_transition_table, entry){
-    if(entry->transition_key_size <= size){
+    if(entry->transition_key_size <= size && fsm_default_input_matching_fn(entry->transition_key, entry->transition_key_size, input_buffer)){
       next_state = entry->next_state;
       if(entry->outp_fn){
-        entry->outp_fn(fsm, state, next_state, input_buffer, entry->transition_key_size);
+        entry->outp_fn(state, next_state, input_buffer, entry->transition_key_size, output_buffer);
       }
+      *length_read += entry->transition_key_size;
       return next_state;
     }
   }FSM_ITERATE_END(state->state_transition_table, entry);
@@ -116,8 +126,8 @@ execute_fsm(fsm_t *fsm, char *input_buffer, unsigned int size, fsm_output_buff_t
   state_t *next_state = NULL;
   *fsm_result = FSM_FALSE;
   char *buffer_to_parse;
-  unsigned int input_buffer_len = 0, cursor = 0, length_read = 0;
-
+  unsigned int input_buffer_len = 0, length_read = 0;
+  fsm->input_buffer_cursor = 0;
   if(input_buffer && size){
     buffer_to_parse = input_buffer;
     input_buffer_len = size;
@@ -129,22 +139,20 @@ execute_fsm(fsm_t *fsm, char *input_buffer, unsigned int size, fsm_output_buff_t
   if(!output_buffer){
     output_buffer = fsm->fsm_output_buff;
   }
-  else{
-    init_fsm_output_buffer(output_buffer);
-  }
-  while(cursor < MAX_INPT_BUFFER_LEN){
-    next_state = fsm_apply_transition(fsm, current_state, buffer_to_parse + cursor, input_buffer_len - cursor, &length_read, output_buffer);
+  init_fsm_output_buffer(output_buffer);
+
+  while(fsm->input_buffer_cursor < MAX_INPT_BUFFER_LEN){
+    length_read = 0;
+    next_state = fsm_apply_transition(fsm, current_state, buffer_to_parse + fsm->input_buffer_cursor, input_buffer_len - fsm->input_buffer_cursor, &length_read, output_buffer);
     if(!next_state){
       return FSM_NO_TRANSITION;
     }
     if(length_read){
-      cursor += length_read;
+      fsm->input_buffer_cursor += length_read;
       current_state = next_state;
-      if(cursor == input_buffer_len)
+      if(fsm->input_buffer_cursor == input_buffer_len)
         break;
       continue;
-      printf("%d",cursor);
-
     }
     break;
   }
