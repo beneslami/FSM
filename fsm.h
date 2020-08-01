@@ -42,11 +42,11 @@ typedef unsigned int (*input_fn)(   /* Returns the size of input buffer read */
   unsigned int*,                    /* Size of Data Read */
   unsigned int);                    /* Max len of read out buffer */
 typedef void (*output_fn)(
-  fsm_t*,
   state_t*,
   state_t*,
   char*,                            /* Input buff */
-  unsigned int                     /* size of Input buffer */
+  unsigned int,                    /* size of Input buffer */
+  fsm_output_buff_t*
   );            /* Output buffer */
 
 /* API declaration */
