@@ -101,6 +101,12 @@ set_fsm_out_buff_curr_pos(fsm_output_buff_t*, int);
 char*
 get_state_name(state_t*);
 
+unsigned int
+get_fsm_output_buff_size();
+
+void
+set_fsm_input_buffer_size(fsm_t*, unsigned int);
+
 static inline fsm_bool_t
 is_tt_entry_empty(tt_entry_t *entry){
   if(!get_next_entry(entry)){
@@ -108,42 +114,5 @@ is_tt_entry_empty(tt_entry_t *entry){
   }
   return FSM_FALSE;
 }
-
-/*char*
-get_fsm_output_string(fsm_t*);
-
-char*
-get_transition_table_entry_key(tt_entry_t*);
-
-unsigned int
-get_transition_table_entry_key(tt_entry_t*);
-
-state_t*
-get_transition_table_entry_key(tt_entry_t*);
-
-fsm_bool_t
-get_state_fsm_bool(state_t*);
-
-state_t*
-get_fsm_initial_state(fsm_t*);
-
-char*
-get_fsm_name(fsm_t*);
-
-char*
-get_fsm_input_buffer(fsm_t*);
-
-unsigned int
-get_fsm_input_buffer_size(fsm_t*);
-
-
-tt_t
-get_state_transition_table(state_t*);
-
-char*
-fsm_output_buffer(fsm_output_buff_t*);
-
-unsigned int
-fsm_curser_position(fsm_output_buff_t*);*/
 
 #endif
