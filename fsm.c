@@ -143,6 +143,8 @@ execute_fsm(fsm_t *fsm, char *input_buffer, unsigned int size, fsm_output_buff_t
       if(cursor == input_buffer_len)
         break;
       continue;
+      printf("%d",cursor);
+
     }
     break;
   }
@@ -161,11 +163,6 @@ init_fsm_output_buffer(fsm_output_buff_t *out){
 fsm_output_buff_t*
 get_fsm_output_buff_t(fsm_t *fsm){
   return fsm->fsm_output_buff;
-}
-
-void
-set_fsm_output_buffer_cursor(fsm_t *fsm, state_t *from, state_t *to, char out, char *input_buff){
-
 }
 
 unsigned int
@@ -191,4 +188,15 @@ get_next_entry(tt_entry_t *entry){
 char*
 get_state_name(state_t *state){
   return state->state_name;
+}
+
+unsigned int
+get_fsm_output_buff_size(){
+    return sizeof(fsm_output_buff_t);
+}
+
+void
+set_fsm_input_buffer_size(fsm_t *fsm, unsigned int size){
+  fsm->input_buffer[size] = '\0';
+  fsm->input_buffer_size = size;
 }
