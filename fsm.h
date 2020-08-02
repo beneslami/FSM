@@ -9,6 +9,7 @@
 #define MAX_STATE_NAME_SIZE 32
 #define MAX_TRANSITION_TABLE_SIZE 128
 #define MAX_TRANSITION_KEY_SIZE 64
+#define MAX_TT_ENTRY_CALLBACKS 32
 
 #define FSM_ITERATE_BEGIN(transition_table, entry_ptr)      \
   do{                                                       \
@@ -34,13 +35,14 @@ typedef enum {
   FSM_NO_TRANSITION,
   FSM_NO_ERROR
 }fsm_error_t;
-typedef unsigned int (*input_fn)(   /* Returns the size of input buffer read */
+typedef fsm_bool_t (*input_fn)(     /* Returns the size of input buffer read */
   char*,                            /* Input Buffer */
   unsigned int,                     /* Size of Input Buffer */
-  unsigned int,                     /* Starting position to read the buffer */
-  char*,                            /* Data Read */
-  unsigned int*,                    /* Size of Data Read */
-  unsigned int);                    /* Max len of read out buffer */
+  unsigned int,                    /* Starting position to read the buffer */
+  char*,
+  unsigned int,
+  unsigned int);
+  
 typedef void (*output_fn)(
   state_t*,
   state_t*,
@@ -106,6 +108,15 @@ get_fsm_output_buff_size();
 
 void
 set_fsm_input_buffer_size(fsm_t*, unsigned int);
+
+void
+register_input_matching_tt_entry_cb(tt_entry_t*, input_fn);
+
+void
+fsm_register_input_matching_fn_cb(fsm_t*, input_fn);
+
+void
+create_and_insert_new_tt_entry_wild_card(state_t*, state_t*, output_fn);
 
 static inline fsm_bool_t
 is_tt_entry_empty(tt_entry_t *entry){
