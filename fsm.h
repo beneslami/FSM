@@ -35,14 +35,14 @@ typedef enum {
   FSM_NO_TRANSITION,
   FSM_NO_ERROR
 }fsm_error_t;
-typedef fsm_bool_t (*input_fn)(     /* Returns the size of input buffer read */
+typedef unsigned int (*input_fn)(     /* Returns the size of input buffer read */
   char*,                            /* Input Buffer */
   unsigned int,                     /* Size of Input Buffer */
   unsigned int,                    /* Starting position to read the buffer */
   char*,
-  unsigned int,
+  unsigned int*,
   unsigned int);
-  
+
 typedef void (*output_fn)(
   state_t*,
   state_t*,
@@ -50,6 +50,13 @@ typedef void (*output_fn)(
   unsigned int,                    /* size of Input buffer */
   fsm_output_buff_t*
   );            /* Output buffer */
+
+typedef fsm_bool_t (*input_matching_fn)(
+  char*,
+  unsigned int,
+  char*,
+  unsigned int,
+  unsigned int*);
 
 /* API declaration */
 tt_t*
@@ -110,13 +117,19 @@ void
 set_fsm_input_buffer_size(fsm_t*, unsigned int);
 
 void
-register_input_matching_tt_entry_cb(tt_entry_t*, input_fn);
+register_input_matching_tt_entry_cb(tt_entry_t*, input_matching_fn);
 
 void
-fsm_register_input_matching_fn_cb(fsm_t*, input_fn);
+fsm_register_input_matching_fn_cb(fsm_t*, input_matching_fn);
 
 void
 create_and_insert_new_tt_entry_wild_card(state_t*, state_t*, output_fn);
+
+void
+fsm_echo_output_fn(state_t*, state_t*, char*, unsigned int, fsm_output_buff_t*);
+
+tt_entry_t*
+get_next_empty_tt_entry(tt_t*);
 
 static inline fsm_bool_t
 is_tt_entry_empty(tt_entry_t *entry){
