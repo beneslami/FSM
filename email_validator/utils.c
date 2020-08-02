@@ -83,7 +83,7 @@ email_validator_fsm(void){
   register_input_matching_tt_entry_cb(entry, match_any_0_9_match_fn);
   register_input_matching_tt_entry_cb(entry, match_any_a_z_match_fn);
   register_input_matching_tt_entry_cb(entry, match_any_A_Z_match_fn);
-  entry = create_and_insert_new_tt_entry(get_state_tt(q2), '@', 1, 0, q3);
+  entry = create_and_insert_new_tt_entry(get_state_tt(q2), "@", 1, 0, q3);
   create_and_insert_new_tt_entry_wild_card(q2, D, 0);
 
   /* q3 */
