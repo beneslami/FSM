@@ -12,9 +12,9 @@ struct fsm_{
   state_t *initial_state;  /* initial state of FSM to start with */
   char fsm_name[MAX_FSM_NAME_SIZE];  /* Name of FSM */
   char input_buffer[MAX_INPT_BUFFER_LEN]; /* Application provided input data to parse by FSM */
-  input_fn input_matching_fn_cb;
   unsigned int input_buffer_size; /* Length of above data */
   unsigned int input_buffer_cursor;
+  input_matching_fn input_matching_fn_cb;
   fsm_output_buff_t *fsm_output_buff;
 };
 
@@ -22,7 +22,6 @@ struct state_ {
   char state_name[MAX_STATE_NAME_SIZE]; /* Name of the state. must be unique within FSM */
   tt_t *state_transition_table; /* Transition table of the state */
   fsm_bool_t is_final;  /* boolean if the state is final or not */
-  input_fn input_matching_fn[MAX_TT_ENTRY_CALLBACKS];
 };
 
 struct transition_table_entry_ {
@@ -30,16 +29,43 @@ struct transition_table_entry_ {
   unsigned int transition_key_size;
   output_fn outp_fn;
   state_t *next_state;
-  input_fn input_matching_fn[MAX_TT_ENTRY_CALLBACKS];
+  input_matching_fn input_matching_fn_cb[MAX_TT_ENTRY_CALLBACKS];
 };
 
 struct transition_table_{
   tt_entry_t tt_entry_t[MAX_TRANSITION_TABLE_SIZE];
 };
 
+#ifdef ENABLE_EMAIL_VALIDATOR
+extern fsm_bool_t
+match_any_character_match_fn(char *data1, unsigned int size, char *data2, unsigned int user_data_len, unsigned int *length_read);
+#endif
+
+extern fsm_bool_t
+match_any_character_match_fn(char *data1, unsigned int size,
+        char *data2, unsigned int user_data_len,
+        unsigned int *length_read);
+
+static fsm_bool_t
+fsm_default_input_matching_fn(char *transition_key, unsigned int size, char *user_data, unsigned int user_data_len, unsigned int *length_read){
+  if(size <= user_data_len){
+      if(memcmp(transition_key, user_data, size))
+          return FSM_FALSE;
+      *length_read = size;
+      return FSM_TRUE;
+  }
+  *length_read = 0;
+  return FSM_FALSE;
+}
+
 tt_t*
 get_state_tt(state_t* state){
   return state->state_transition_table;
+}
+
+void
+fsm_register_input_matching_fn_cb(fsm_t *fsm, input_matching_fn input_matching_fn_cb){
+    fsm->input_matching_fn_cb = input_matching_fn_cb;
 }
 
 fsm_t*
@@ -49,6 +75,7 @@ create_new_fsm(const char *fsm_name){
   fsm->input_buffer_size = 0;
   fsm->fsm_output_buff = calloc(1, sizeof(fsm_output_buff_t));
   fsm->input_buffer_cursor = 0;
+  fsm_register_input_matching_fn_cb(fsm, fsm_default_input_matching_fn);
   return fsm;
 }
 
@@ -69,10 +96,16 @@ set_fsm_initial_state(fsm_t *fsm, state_t *state){
   fsm->initial_state = state;
 }
 
-static tt_entry_t*
+void
+set_fsm_input_buffer_size(fsm_t *fsm, unsigned int size){
+  fsm->input_buffer[size] = '\0';
+  fsm->input_buffer_size = size;
+}
+
+tt_entry_t*
 get_next_empty_tt_entry(tt_t *transition_table){
-  //assert(transition_table);
   tt_entry_t *entry_ptr = NULL;
+  assert(transition_table);
   FSM_ITERATE_BEGIN(transition_table, entry_ptr){
   }FSM_ITERATE_END(transition_table, entry_ptr);
   if(is_tt_entry_empty(entry_ptr) == FSM_TRUE)
@@ -96,6 +129,14 @@ create_and_insert_new_tt_entry(tt_t *transition_table, char *transition_key, uns
   return entry;
 }
 
+void
+create_and_insert_new_tt_entry_wild_card(state_t *from, state_t *to, output_fn output_fn_cb){
+  tt_entry_t *entry = create_and_insert_new_tt_entry(from->state_transition_table, 0, 0, output_fn_cb, to);
+  #ifdef ENABLE_EMAIL_VALIDATOR
+  register_input_matching_tt_entry_cb(entry, match_any_character_match_fn);
+  #endif
+}
+
 static fsm_bool_t
 fsm_evaluate_transition_entry_match(fsm_t *fsm, tt_entry_t *entry, char *input_buffer, unsigned int input_buffer_len, unsigned int *length_read){
   unsigned int i = 0;
@@ -105,13 +146,13 @@ fsm_evaluate_transition_entry_match(fsm_t *fsm, tt_entry_t *entry, char *input_b
   if(!input_buffer)
      return FSM_TRUE;
 
-  is_tt_entry_cb_present = entry->input_matching_fn[0] ? FSM_TRUE : FSM_FALSE;
+  is_tt_entry_cb_present = entry->input_matching_fn_cb[0] ? FSM_TRUE : FSM_FALSE;
   if(is_tt_entry_cb_present){
     for(; i < MAX_TT_ENTRY_CALLBACKS; i++){
-      if(!entry->input_matching_fn[i]){
+      if(!entry->input_matching_fn_cb[i]){
         return FSM_FALSE;
       }
-      if((entry->input_matching_fn[i])(NULL, 0, input_buffer, input_buffer_len, length_read)){
+      if((entry->input_matching_fn_cb[i])(NULL, 0, input_buffer, input_buffer_len, length_read)){
           return FSM_TRUE;
       }
       *length_read = 0;
@@ -136,7 +177,7 @@ fsm_apply_transition(fsm_t *fsm, state_t *state, char *input_buffer, unsigned in
       if(entry->outp_fn){
         entry->outp_fn(state, next_state, input_buffer, entry->transition_key_size, output_buffer);
       }
-      *length_read += entry->transition_key_size;
+      //*length_read += entry->transition_key_size;
       return next_state;
     }
   }FSM_ITERATE_END(state->state_transition_table, entry);
@@ -229,33 +270,13 @@ get_fsm_output_buff_size(){
 }
 
 void
-set_fsm_input_buffer_size(fsm_t *fsm, unsigned int size){
-  fsm->input_buffer[size] = '\0';
-  fsm->input_buffer_size = size;
-}
-
-void
-fsm_register_input_matching_fn_cb(fsm_t *fsm, input_fn input_matching_fn_cb){
-    fsm->input_matching_fn_cb = input_matching_fn_cb;
-}
-
-extern fsm_bool_t
-match_any_character_match_fn(char *data1, unsigned int size, char *data2, unsigned int user_data_len, unsigned int *length_read);
-
-void
-register_input_matching_tt_entry_cb(tt_entry_t *entry, input_fn input_matching_fn_callback){
+register_input_matching_tt_entry_cb(tt_entry_t *entry, input_matching_fn input_matching_fn_callback){
   unsigned int i = 0;
   for(; i<MAX_TT_ENTRY_CALLBACKS; i++){
-    if(entry->input_matching_fn[i] == input_matching_fn_callback)
+    if(entry->input_matching_fn_cb[i])
       continue;
-    entry->input_matching_fn[i] = input_matching_fn_callback;
+    entry->input_matching_fn_cb[i] = input_matching_fn_callback;
     return;
   }
   assert(0);
-}
-
-void
-create_and_insert_new_tt_entry_wild_card(state_t *from, state_t *to, output_fn output_fn_cb){
-  tt_entry_t *entry = create_and_insert_new_tt_entry(from->state_transition_table, 0, 0, output_fn_cb, to);
-  register_input_matching_tt_entry_cb(entry, match_any_character_match_fn);
 }
